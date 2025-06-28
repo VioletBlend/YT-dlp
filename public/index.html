@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube連番ダウンローダー</title>
+  <style>
+    body {
+      background: #000;
+      color: #00ffff;
+      font-family: sans-serif;
+      text-align: center;
+      padding-top: 60px;
+    }
+    input, button {
+      font-size: 16px;
+      padding: 10px;
+      margin: 6px;
+      border: 1px solid #00ffff;
+      border-radius: 4px;
+      background: transparent;
+      color: #00ffff;
+    }
+    input {
+      width: 480px;
+    }
+    button:hover {
+      background: #00ffff;
+      color: #000;
+    }
+    #notify {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #00ff99;
+    }
+  </style>
+</head>
+<body>
+  <h2>🎬 YouTubeの動画を音声付きで保存</h2>
+  <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." /><br>
+  <input id="filename" type="text" placeholder="任意のファイル名（省略で連番）" /><br>
+  <button onclick="startDownload()">⬇ ダウンロード</button>
+  <button onclick="resetCounter()">🔄 連番リセット</button>
+  <div id="notify"></div>
+
+  <script>
+    async function startDownload() {
+      const url = document.getElementById("url").value;
+      const filename = document.getElementById("filename").value;
+      const notify = document.getElementById("notify");
+      notify.textContent = "ダウンロード中...";
+
+      try {
+        const res = await fetch("/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, filename })
+        });
+        if (!res.ok) throw new Error("ダウンロード失敗");
+
+        const blob = await res.blob();
+        const contentDisposition = res.headers.get("Content-Disposition");
+        const match = /filename="(.+?)"/.exec(contentDisposition);
+        const suggested = match ? match[1] : "video.mp4";
+        const custom = prompt("保存するファイル名を入力してください：", suggested);
+        if (custom) {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = custom;
+          a.click();
+        }
+        notify.textContent = "✅ ダウンロード成功しました！";
+      } catch (e) {
+        notify.textContent = "❌ エラー：" + e.message;
+      }
+    }
+
+    async function resetCounter() {
+      await fetch("/reset", { method: "POST" });
+      alert("連番カウンターを00にリセットしました");
+    }
+  </script>
+</body>
+</html>
